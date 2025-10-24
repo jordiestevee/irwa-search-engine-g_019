@@ -1,0 +1,2 @@
+The code for Part 1 is configured to load the products dataset from the data/ folder located at the root of the repository.
+Please make sure the dataset file (fashion_products_dataset.json) is downloaded and placed in this folder before running the notebook locally.
