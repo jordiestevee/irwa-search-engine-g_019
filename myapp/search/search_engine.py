@@ -1,36 +1,111 @@
 import random
 import numpy as np
+import re
+import math
+from collections import defaultdict, Counter
 
 from myapp.search.objects import Document
 
-
-def dummy_search(corpus: dict, search_id, num_results=20):
-    """
-    Just a demo method, that returns random <num_results> documents from the corpus
-    :param corpus: the documents corpus
-    :param search_id: the search id
-    :param num_results: number of documents to return
-    :return: a list of random documents from the corpus
-    """
-    res = []
-    doc_ids = list(corpus.keys())
-    docs_to_return = np.random.choice(doc_ids, size=num_results, replace=False)
-    for doc_id in docs_to_return:
-        doc = corpus[doc_id]
-        res.append(Document(pid=doc.pid, title=doc.title, description=doc.description,
-                            url="doc_details?pid={}&search_id={}&param2=2".format(doc.pid, search_id), ranking=random.random()))
-    return res
-
-
 class SearchEngine:
-    """Class that implements the search engine logic"""
+    """Implements BM25 search over the corpus (cached index)."""
 
-    def search(self, search_query, search_id, corpus):
+    def __init__(self):
+        self._indexed = False
+        self._index = defaultdict(list)   # term -> [(pid, tf), ...]
+        self._idf = {}
+        self._doc_len = {}
+        self._avgdl = 0.0
+        self._N = 0
+
+    def _tokenize(self, text: str):
+        text = (text or "").lower()
+        return re.findall(r"[a-z0-9]+", text)
+
+    def _build_index(self, corpus: dict):
+        self._index.clear()
+        self._idf.clear()
+        self._doc_len.clear()
+
+        df_counts = Counter()
+        self._N = len(corpus)
+        lens = []
+
+        for pid, doc in corpus.items():
+            # Safe access to fields that may/may not exist
+            title = getattr(doc, "title", "") or ""
+            desc = getattr(doc, "description", "") or ""
+            brand = getattr(doc, "brand", "") or ""
+            category = getattr(doc, "category", "") or ""
+            subcat = getattr(doc, "sub_category", "") or ""
+
+            tokens = self._tokenize(f"{title} {desc} {brand} {category} {subcat}")
+            counts = Counter(tokens)
+
+            dl = sum(counts.values())
+            self._doc_len[str(pid)] = dl
+            lens.append(dl)
+
+            for term, tf in counts.items():
+                self._index[term].append((str(pid), tf))
+                df_counts[term] += 1
+
+        self._avgdl = (sum(lens) / len(lens)) if lens else 0.0
+
+        # BM25 style IDF
+        for term, dfi in df_counts.items():
+            self._idf[term] = math.log((self._N - dfi + 0.5) / (dfi + 0.5) + 1)
+
+        self._indexed = True
+
+    def _bm25_scores(self, terms, candidates, k1=1.5, b=0.75):
+        scores = defaultdict(float)
+        for t in terms:
+            if t not in self._index:
+                continue
+            idf_t = self._idf.get(t, 0.0)
+            for pid, tf in self._index[t]:
+                if pid not in candidates:
+                    continue
+                dl = self._doc_len.get(pid, 1)
+                denom = tf + k1 * (1 - b + b * (dl / (self._avgdl or 1)))
+                scores[pid] += idf_t * (tf * (k1 + 1)) / denom
+        return scores
+
+    def search(self, search_query, search_id, corpus, num_results=20):
         print("Search query:", search_query)
 
-        results = []
-        ### You should implement your search logic here:
-        results = dummy_search(corpus, search_id)  # replace with call to search algorithm
+        if not self._indexed:
+            self._build_index(corpus)
 
-        # results = search_in_corpus(search_query)
+        terms = self._tokenize(search_query)
+        if not terms:
+            return []
+
+        # Soft matching: union of candidate docs for any query term
+        candidates = set()
+        for t in terms:
+            if t in self._index:
+                candidates |= {pid for pid, _ in self._index[t]}
+
+        if not candidates:
+            return []
+
+        scores = self._bm25_scores(terms, candidates)
+        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:num_results]
+
+        results = []
+        for pid, score in ranked:
+            doc = corpus[pid]
+
+            # Keep URL format compatible with web_app.py
+            url = "doc_details?pid={}&search_id={}&param2=2".format(pid, search_id)
+
+            results.append(Document(
+                pid=doc.pid,
+                title=doc.title,
+                description=doc.description,
+                url=url,
+                ranking=float(score)
+            ))
+
         return results
