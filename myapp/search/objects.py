@@ -101,11 +101,28 @@ class ResultItem(BaseModel):
     pid: str
     title: str
     description: Optional[str] = None
+
+    # internal link to our Flask detail page
     url: Optional[str] = None
+
+    # ranking score from the search algorithm
     ranking: Optional[float] = None
+
+    # extra metadata used in UI + RAG
+    selling_price: Optional[float] = None
+    discount: Optional[float] = None
+    average_rating: Optional[float] = None
+    brand: Optional[str] = None
+    category: Optional[str] = None
+
+    # original URL of the product on the e-commerce site
+    source_url: Optional[str] = None
+
+    images: Optional[List[str]] = None
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)
-    
+
     def to_json(self):
         return self.model_dump_json()
+

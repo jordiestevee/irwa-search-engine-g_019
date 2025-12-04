@@ -1,13 +1,12 @@
-import random
-import numpy as np
 import re
 import math
 from collections import defaultdict, Counter
 
-from myapp.search.objects import Document
+from myapp.search.objects import Document, ResultItem
+
 
 class SearchEngine:
-    """Implements BM25 search over the corpus (cached index)."""
+    """BM25 search over the product corpus (cached in memory)."""
 
     def __init__(self):
         self._indexed = False
@@ -17,21 +16,27 @@ class SearchEngine:
         self._avgdl = 0.0
         self._N = 0
 
+    # ---------- Text processing ----------
+
     def _tokenize(self, text: str):
         text = (text or "").lower()
         return re.findall(r"[a-z0-9]+", text)
 
+    # ---------- Index building ----------
+
     def _build_index(self, corpus: dict):
+        """
+        Build an in-memory BM25 index from the corpus of Document objects.
+        """
         self._index.clear()
         self._idf.clear()
         self._doc_len.clear()
 
         df_counts = Counter()
         self._N = len(corpus)
-        lens = []
+        lengths = []
 
         for pid, doc in corpus.items():
-            # Safe access to fields that may/may not exist
             title = getattr(doc, "title", "") or ""
             desc = getattr(doc, "description", "") or ""
             brand = getattr(doc, "brand", "") or ""
@@ -43,19 +48,21 @@ class SearchEngine:
 
             dl = sum(counts.values())
             self._doc_len[str(pid)] = dl
-            lens.append(dl)
+            lengths.append(dl)
 
             for term, tf in counts.items():
                 self._index[term].append((str(pid), tf))
                 df_counts[term] += 1
 
-        self._avgdl = (sum(lens) / len(lens)) if lens else 0.0
+        self._avgdl = (sum(lengths) / len(lengths)) if lengths else 0.0
 
-        # BM25 style IDF
+        # BM25-style IDF
         for term, dfi in df_counts.items():
             self._idf[term] = math.log((self._N - dfi + 0.5) / (dfi + 0.5) + 1)
 
         self._indexed = True
+
+    # ---------- BM25 scoring ----------
 
     def _bm25_scores(self, terms, candidates, k1=1.5, b=0.75):
         scores = defaultdict(float)
@@ -71,7 +78,18 @@ class SearchEngine:
                 scores[pid] += idf_t * (tf * (k1 + 1)) / denom
         return scores
 
-    def search(self, search_query, search_id, corpus, num_results=20):
+    # ---------- Public search API ----------
+
+    def search(self, search_query: str, search_id: int, corpus: dict, num_results: int = 20):
+        """
+        Main entry point used from web_app.py.
+
+        :param search_query: user query string
+        :param search_id: id returned by AnalyticsData.save_query_terms
+        :param corpus: dict[pid -> Document]
+        :param num_results: how many top results to return
+        :return: list[ResultItem]
+        """
         print("Search query:", search_query)
 
         if not self._indexed:
@@ -81,7 +99,7 @@ class SearchEngine:
         if not terms:
             return []
 
-        # Soft matching: union of candidate docs for any query term
+        # Soft matching: docs that contain any of the query terms
         candidates = set()
         for t in terms:
             if t in self._index:
@@ -95,17 +113,25 @@ class SearchEngine:
 
         results = []
         for pid, score in ranked:
-            doc = corpus[pid]
+            doc: Document = corpus[pid]
 
-            # Keep URL format compatible with web_app.py
-            url = "doc_details?pid={}&search_id={}&param2=2".format(pid, search_id)
+            # internal link (goes to our Flask detail page)
+            internal_url = f"doc_details?pid={pid}&search_id={search_id}"
 
-            results.append(Document(
+            result = ResultItem(
                 pid=doc.pid,
                 title=doc.title,
                 description=doc.description,
-                url=url,
-                ranking=float(score)
-            ))
+                url=internal_url,
+                ranking=float(score),
+                selling_price=doc.selling_price,
+                discount=doc.discount,
+                average_rating=doc.average_rating,
+                brand=doc.brand,
+                category=doc.category,
+                source_url=doc.url,
+                images=doc.images,
+            )
+            results.append(result)
 
         return results

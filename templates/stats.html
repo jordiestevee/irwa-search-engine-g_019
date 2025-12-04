@@ -1,15 +1,62 @@
 {% extends "base.html" %}
-{% block page_title %}{{ page_title }}{% endblock %}
-{% block content %}
-    <h2>Quick Stats</h2>
-    <h4>Clicked docs:</h4>
+{% block page_title %}Stats{% endblock %}
 
-    {% for doc in clicks_data %}
-        <div class="pb-3">
-            <div class="">
-                <span class="text-dark"> ({{ doc.count }} visits) </span> — id: {{ doc.pid }} — {{ doc.title }} - {{ doc.description }}
-            </div>
-        </div>
-        <hr>
+{% block content %}
+
+<h2>Search Engine Statistics</h2>
+<p class="text-muted">Overview of system activity.</p>
+<hr>
+
+<!-- SUMMARY METRICS -->
+<h4>General Metrics</h4>
+<ul>
+    <li><strong>Total Queries:</strong> {{ metrics.total_queries }}</li>
+    <li><strong>Total Clicks:</strong> {{ metrics.total_clicks }}</li>
+    <li><strong>Average Clicks per Query:</strong> {{ metrics.avg_clicks_per_query }}</li>
+</ul>
+<hr>
+
+
+<!-- RECENT QUERIES -->
+<h4>Recent Queries</h4>
+<table class="table table-striped">
+    <thead>
+    <tr>
+        <th>Query</th>
+        <th>Timestamp</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for entry in query_log %}
+        <tr>
+            <td>{{ entry.query }}</td>
+            <td>{{ entry.timestamp }}</td>
+        </tr>
     {% endfor %}
+    </tbody>
+</table>
+<hr>
+
+
+<!-- DOCUMENT CLICK DATA -->
+<h4>Most Clicked Documents</h4>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Product ID</th>
+            <th>Clicks</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for doc in clicks_data %}
+        <tr>
+            <td>{{ doc.pid }}</td>
+            <td>{{ doc.clicks }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
 {% endblock %}
+
+

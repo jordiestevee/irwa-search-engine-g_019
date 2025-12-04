@@ -1,30 +1,50 @@
-{% extends "base.html" %}
-{% block page_title %}{{ page_title }}{% endblock %}
+<div style="background: yellow; padding: 10px;">DEBUG: DASHBOARD TEMPLATE LOADED</div>
 
-{% block header %}
-    <!-- Next tag loads Charts.js https://www.chartjs.org/docs/latest/ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.2/chart.min.js"
-            integrity="sha512-tMabqarPtykgDtdtSqCL3uLVM0gS1ZkUAVhRFu1vSEFgvB73niFQWJuvviDyBGBH22Lcau4rHB5p2K2T0Xvr6Q=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-{% endblock %}
+{% extends "base.html" %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
 
-    <!--
-    Examples of what to show in Dashboard:
+<h2>Most Visited Documents</h2>
+<p class="text-muted">Overview of user interactions and product popularity.</p>
+<hr>
 
-    - Ranking of visited documents (from results page)
-    - Visitor's preferred browsers
-    - Visitor's city (from IP)
-    - preferred queries ranking
-    - preferred terms
-    - etc.
+<!-- TABLE OF MOST CLICKED DOCUMENTS -->
+<table class="table table-striped table-bordered">
+    <thead class="thead-light">
+        <tr>
+            <th>Product ID</th>
+            <th>Clicks</th>
+            <th>Title</th>
+            <th>Description</th>
+        </tr>
+    </thead>
 
-    -->
+    <tbody>
+    {% for doc in visited_docs %}
+        <tr>
+            <td>{{ doc.pid }}</td>
+            <td>{{ doc.clicks }}</td>
+            <td>{{ doc.title }}</td>
+            <td>{{ doc.description }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 
-    <h3>Dashboard</h3>
-    <iframe src="/plot_number_of_views" width="600" height="400" style="border: none;"></iframe>
+<hr>
 
+<!-- EMBEDDED ALTAIR CLICK CHART -->
+<h3>Click Distribution Chart</h3>
+<p class="text-muted">Visualization of clicks per document.</p>
+
+<iframe
+    src="/plot_number_of_views"
+    width="100%"
+    height="500"
+    frameborder="0"
+    style="border-radius: 8px; border: 1px solid #ccc;">
+</iframe>
 
 {% endblock %}
 

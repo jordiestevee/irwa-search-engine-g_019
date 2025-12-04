@@ -1,88 +1,82 @@
+import os
 import json
-import random
-import altair as alt
-import pandas as pd
-import time
-import uuid
-from collections import defaultdict, Counter
+from datetime import datetime
+
+ANALYTICS_FILE = os.path.join("data", "analytics.json")
 
 
 class AnalyticsData:
-    """
-    In-memory persistence.
-    Backward compatible with boilerplate + extended for Part 4 report.
-    """
 
-    # old table (web_app directly uses this)
-    fact_clicks = dict([])
+    def __init__(self):
+        self._ensure_file()
 
-    # new tables (optional use in report)
-    dim_sessions = dict([])
-    fact_requests = []
-    fact_queries = dict([])
-    fact_click_events = dict([])
+    # -----------------------------------
+    def _ensure_file(self):
+        if not os.path.exists(ANALYTICS_FILE):
+            data = {"queries": [], "clicks": []}
+            self._save(data)
 
-    def save_query_terms(self, terms: str) -> int:
-        # still returns a random query id as seminar expected
-        qid = random.randint(0, 100000)
+    def _load(self):
+        with open(ANALYTICS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
 
-        # also store query terms in a richer table for your report
-        self.fact_queries[str(qid)] = {
-            "ts": time.time(),
-            "raw_query": terms,
-            "terms": terms.lower().split(),
-            "num_terms": len(terms.split())
-        }
-        return qid
+    def _save(self, data):
+        with open(ANALYTICS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
 
-    def plot_number_of_views(self):
-        data = [{'Document ID': doc_id, 'Number of Views': count}
-                for doc_id, count in self.fact_clicks.items()]
-        df = pd.DataFrame(data) if data else pd.DataFrame(columns=["Document ID", "Number of Views"])
+    # -----------------------------------
+    # Record a query
+    def record_query(self, query):
+        data = self._load()
+        data["queries"].append({
+            "query": query,
+            "timestamp": datetime.now().isoformat()
+        })
+        self._save(data)
 
-        chart = alt.Chart(df).mark_bar().encode(
-            x='Document ID',
-            y='Number of Views'
-        ).properties(
-            title='Number of Views per Document'
-        )
-        return chart.to_html()
+    # Record a click
+    def record_click(self, pid):
+        data = self._load()
+        data["clicks"].append({
+            "pid": pid,
+            "timestamp": datetime.now().isoformat()
+        })
+        self._save(data)
 
-    # ---- optional richer helpers for report/dashboard ----
-    def metrics(self):
-        total_queries = len(self.fact_queries)
-        total_clicks = sum(self.fact_clicks.values()) if self.fact_clicks else 0
-        ctr = total_clicks / max(1, total_queries)
-
-        top_queries = Counter([q["raw_query"] for q in self.fact_queries.values()]).most_common(10)
+    # -----------------------------------
+    # Metrics for Stats
+    def get_metrics(self):
+        data = self._load()
+        total_queries = len(data["queries"])
+        total_clicks = len(data["clicks"])
+        avg_clicks = (total_clicks / total_queries) if total_queries else 0
 
         return {
             "total_queries": total_queries,
             "total_clicks": total_clicks,
-            "ctr": ctr,
-            "top_queries": top_queries
+            "avg_clicks_per_query": round(avg_clicks, 2)
         }
 
-    def plot_top_queries(self):
-        data = [{"Query": q, "Count": c} for q, c in self.metrics()["top_queries"]]
-        df = pd.DataFrame(data) if data else pd.DataFrame(columns=["Query", "Count"])
+    # Data for dashboard chart
+    def get_document_clicks(self):
+        data = self._load()
+        freq = {}
+        for c in data["clicks"]:
+            pid = c["pid"]
+            freq[pid] = freq.get(pid, 0) + 1
+        return [{"pid": pid, "clicks": count} for pid, count in freq.items()]
 
-        chart = alt.Chart(df).mark_bar().encode(
-            x="Count:Q",
-            y=alt.Y("Query:N", sort="-x")
-        ).properties(title="Top Queries")
-        return chart.to_html()
+    # Query log for stats page
+    def get_query_log(self):
+        data = self._load()
+        return data["queries"]
 
 
+# -----------------------------------
+# Optional minimal object to keep compatibility
 class ClickedDoc:
-    def __init__(self, doc_id, description, counter):
-        self.doc_id = doc_id
+    def __init__(self, pid, description, counter):
+        self.pid = pid
         self.description = description
         self.counter = counter
 
-    def to_json(self):
-        return self.__dict__
-
-    def __str__(self):
-        # safer than json.dumps(self)
-        return json.dumps(self.__dict__)

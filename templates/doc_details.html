@@ -1,18 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Document Detail - IRWA Search Engine</title>
-</head>
-<body>
-<div><a href="/" >Home</a></div>
-<div><a href="/stats" >Stats</a></div>
-<div><a href="/dashboard" >Dashboard</a></div>
-<h1>Document Detail Page</h1>
-<p>This is a placeholder for document details.</p>
-<p>Here you can display more information about the document.</p>
-<p>For example, you might show the full text of the document, metadata, or other relevant details.</p>
-<p>You can also include links to related documents or resources.</p>
-<p>Feel free to customize this page to fit the needs of your application.</p>
-</body>
-</html>
+{% extends "base.html" %}
+{% block page_title %}{% if doc %}{{ doc.title }}{% else %}Document not found{% endif %}{% endblock %}
+
+{% block content %}
+
+    {% if not doc %}
+        <h2>Document not found</h2>
+        <p>The requested product does not exist in the corpus.</p>
+        <a href="/">Back to home</a>
+    {% else %}
+        <h2>{{ doc.title }}</h2>
+
+        <p class="text-muted">
+            {% if doc.brand %}Brand: <strong>{{ doc.brand }}</strong>{% endif %}
+            {% if doc.category %} | Category: {{ doc.category }}{% endif %}
+            {% if doc.sub_category %} / {{ doc.sub_category }}{% endif %}
+        </p>
+
+        {% if doc.images and doc.images[0] %}
+            <div class="mb-3">
+                <img src="{{ doc.images[0] }}" alt="{{ doc.title }}" style="max-width: 250px;">
+            </div>
+        {% endif %}
+
+        {% if doc.description %}
+            <p>{{ doc.description }}</p>
+        {% endif %}
+
+        <h5>Pricing</h5>
+        <ul>
+            <li>Selling price:
+                {% if doc.selling_price is not none %}
+                    {{ doc.selling_price }} €
+                {% else %}
+                    N/A
+                {% endif %}
+            </li>
+            <li>Actual price:
+                {% if doc.actual_price is not none %}
+                    {{ doc.actual_price }} €
+                {% else %}
+                    N/A
+                {% endif %}
+            </li>
+            <li>Discount:
+                {% if doc.discount is not none %}
+                    {{ doc.discount }} %
+                {% else %}
+                    N/A
+                {% endif %}
+            </li>
+            <li>Average rating:
+                {% if doc.average_rating is not none %}
+                    {{ doc.average_rating }}/5
+                {% else %}
+                    N/A
+                {% endif %}
+            </li>
+            <li>Out of stock: {{ 'Yes' if doc.out_of_stock else 'No' }}</li>
+        </ul>
+
+        {% if doc.product_details %}
+            <h5>Product details</h5>
+            <ul>
+                {% for key, value in doc.product_details.items() %}
+                    <li><strong>{{ key }}:</strong> {{ value }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <p>
+            {% if doc.url %}
+                <a href="{{ doc.url }}" target="_blank" class="btn btn-primary btn-sm">
+                    View on original website
+                </a>
+            {% endif %}
+            <a href="javascript:history.back()" class="btn btn-secondary btn-sm">Back to results</a>
+        </p>
+    {% endif %}
+
+{% endblock %}

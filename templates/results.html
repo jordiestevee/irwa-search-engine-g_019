@@ -1,27 +1,68 @@
 {% extends "base.html" %}
 {% block page_title %}{{ page_title }}{% endblock %}
+
 {% block content %}
-    Found <strong>{{ found_counter }}</strong> results...
+
+    <h2>Results for "{{ search_query }}"</h2>
+    <p>Found <strong>{{ found_counter }}</strong> products.</p>
     <hr>
+
+    {# RAG summary block #}
     {% if rag_response %}
         <div class="mb-4 p-3" style="border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9;">
-            <h5>AI-Generated Summary:</h5>
+            <h5>AI-Generated Summary</h5>
             <p>{{ rag_response }}</p>
         </div>
+        <hr>
     {% endif %}
-    <hr>
-    {% for item in results_list %}
-        <div class="pb-3">
-            <div class="doc-title">
-                <a href="{{ item.url }}">{{ item.title }}...
-                </a>
-            </div>
-            <div class="doc-desc">
-                {{ item.doc_date }} — {{ item.description }}
-            </div>
 
-        </div>
+    {% if results_list %}
+        {% for item in results_list %}
+            <div class="pb-3">
+                <div class="doc-title">
+                    <span class="text-muted">#{{ loop.index }}</span>
+                    &nbsp;
+                    <a href="{{ item.url }}">{{ item.title }}</a>
+                </div>
 
-    {% endfor %}
+                <div class="doc-desc">
+                    {{ item.description }}
+                </div>
+
+                <div class="small text-muted mt-1">
+                    <strong>Brand:</strong> {{ item.brand or 'N/A' }} |
+                    <strong>Category:</strong> {{ item.category or 'N/A' }} |
+                    <strong>Price:</strong>
+                    {% if item.selling_price is not none %}
+                        {{ item.selling_price }} €
+                    {% else %}
+                        N/A
+                    {% endif %}
+                    {% if item.discount is not none %}
+                        ({{ item.discount }}% off)
+                    {% endif %}
+                    |
+                    <strong>Rating:</strong>
+                    {% if item.average_rating is not none %}
+                        {{ item.average_rating }}/5
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+
+                <div class="small mt-1">
+                    {% if item.source_url %}
+                        <a href="{{ item.source_url }}" target="_blank">View on original website</a>
+                        &nbsp;|&nbsp;
+                    {% endif %}
+                    <a href="{{ item.url }}">View details</a>
+                </div>
+
+                <hr>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No results found. Try another query.</p>
+    {% endif %}
+
 {% endblock %}
-
