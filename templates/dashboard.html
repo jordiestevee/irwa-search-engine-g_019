@@ -1,4 +1,4 @@
-<div style="background: yellow; padding: 10px;">DEBUG: DASHBOARD TEMPLATE LOADED</div>
+
 
 {% extends "base.html" %}
 {% block page_title %}Dashboard{% endblock %}
@@ -33,18 +33,6 @@
 </table>
 
 <hr>
-
-<!-- EMBEDDED ALTAIR CLICK CHART -->
-<h3>Click Distribution Chart</h3>
-<p class="text-muted">Visualization of clicks per document.</p>
-
-<iframe
-    src="/plot_number_of_views"
-    width="100%"
-    height="500"
-    frameborder="0"
-    style="border-radius: 8px; border: 1px solid #ccc;">
-</iframe>
 
 {% endblock %}
 

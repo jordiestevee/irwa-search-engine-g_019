@@ -185,14 +185,6 @@ def dashboard():
 
 
 # =====================================================
-#                    TEST PLOT ENDPOINT
-# =====================================================
-@app.route('/plot_number_of_views', methods=['GET'])
-def plot_number_of_views():
-    return analytics_data.plot_number_of_views()
-
-
-# =====================================================
 #                       MAIN
 # =====================================================
 if __name__ == "__main__":

@@ -70,6 +70,7 @@ class AnalyticsData:
     def get_query_log(self):
         data = self._load()
         return data["queries"]
+    
 
 
 # -----------------------------------
